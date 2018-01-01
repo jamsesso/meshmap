@@ -44,16 +44,6 @@ public class LocalMeshMapCluster implements MeshMapCluster, AutoCloseable {
       return (MeshMap<K, V>) this.map;
     }
 
-    server = new MeshMapServer(this, self);
-    MeshMapImpl<K, V> map = new MeshMapImpl<>(this, server, self);
-
-    try {
-      server.start(map);
-    }
-    catch(IOException e) {
-      throw new MeshMapException("Unable to start the mesh map server", e);
-    }
-
     File file = new File(directory.getAbsolutePath() + File.separator + self.toString());
 
     try {
@@ -68,6 +58,18 @@ public class LocalMeshMapCluster implements MeshMapCluster, AutoCloseable {
     }
 
     file.deleteOnExit();
+
+    server = new MeshMapServer(this, self);
+    MeshMapImpl<K, V> map = new MeshMapImpl<>(this, server, self);
+
+    try {
+      server.start(map);
+      map.open();
+    }
+    catch(IOException e) {
+      throw new MeshMapException("Unable to start the mesh map server", e);
+    }
+
     server.broadcast(Message.HI);
     this.map = map;
 

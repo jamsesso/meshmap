@@ -11,19 +11,24 @@ public class ClientNode {
          MeshMap<String, String> map = cluster.join()) {
       System.out.println("Joined cluster: " + self);
 
+      map.clear();
+
       map.put("name", "Sam Jesso");
       map.put("age", "23");
-      map.put("status", "Married");
-      map.put("salary", "80000");
+      map.put("status", "Single");
+      map.put("salary", "82000");
       map.put("location", "Fredericton NB");
 
-      Thread.sleep(10_000);
+      System.out.println(map);
 
       System.out.println(map.get("name"));
       System.out.println(map.get("age"));
       System.out.println(map.get("status"));
       System.out.println(map.get("salary"));
       System.out.println(map.get("location"));
+    }
+    finally {
+      System.out.println("Node is leaving cluster");
     }
   }
 }

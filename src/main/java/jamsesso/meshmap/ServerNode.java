@@ -11,10 +11,26 @@ public class ServerNode {
          MeshMap<Object, Object> map = cluster.join()) {
       System.out.println("Joined cluster: " + self);
 
-      while (true) {
-        Thread.sleep(10_000);
-        System.out.println("Local map size: " + map.size());
-      }
+      // Kick of a monitor
+      Thread monitor = new Thread(() -> {
+        while (!Thread.currentThread().isInterrupted()) {
+          try {
+            Thread.sleep(10_000);
+          }
+          catch(InterruptedException e) {
+            e.printStackTrace();
+          }
+
+          System.out.println(map);
+        }
+      });
+
+      monitor.start();
+      System.in.read();
+      monitor.interrupt();
+    }
+    finally {
+      System.out.println("Node is leaving cluster");
     }
   }
 }
