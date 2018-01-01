@@ -11,16 +11,16 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
-  private static final String MSG_PUT = "PUT";
-  private static final String MSG_GET = "GET";
+  private static final String TYPE_PUT = "PUT";
+  private static final String TYPE_GET = "GET";
 
-  private final MeshMapCluster cluster;
+  private final CachedMeshMapCluster cluster;
   private final MeshMapServer server;
   private final Node self;
   private final Map<Object, Object> delegate;
 
   public MeshMapImpl(MeshMapCluster cluster, MeshMapServer server, Node self) {
-    this.cluster = cluster;
+    this.cluster = new CachedMeshMapCluster(cluster);
     this.server = server;
     this.self = self;
     this.delegate = new ConcurrentHashMap<>();
@@ -29,12 +29,18 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
   @Override
   public Message handle(Message message) {
     switch (message.getType()) {
-      case MSG_GET: {
-        Object key = message.getPayload(Object.class);
-        return new Message(MSG_GET, delegate.get(key));
+      case Message.TYPE_HI:
+      case Message.TYPE_BYE: {
+        cluster.clearCache();
+        return Message.ACK;
       }
 
-      case MSG_PUT: {
+      case TYPE_GET: {
+        Object key = message.getPayload(Object.class);
+        return new Message(TYPE_GET, delegate.get(key));
+      }
+
+      case TYPE_PUT: {
         Entry entry = message.getPayload(Entry.class);
         delegate.put(entry.getKey(), entry.getValue());
         return Message.ACK;
@@ -76,7 +82,7 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
       return (V) delegate.get(key);
     }
 
-    Message get = new Message(MSG_GET, key);
+    Message get = new Message(TYPE_GET, key);
     Message response;
 
     try {
@@ -86,7 +92,7 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
       throw new MeshMapRuntimeException(e);
     }
 
-    if (!MSG_GET.equals(response.getType())) {
+    if (!TYPE_GET.equals(response.getType())) {
       throw new MeshMapRuntimeException("Unexpected response from remote node: " + response);
     }
 
@@ -102,7 +108,7 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
       return (V) delegate.put(key, value);
     }
 
-    Message put = new Message(MSG_PUT, new Entry(key, value));
+    Message put = new Message(TYPE_PUT, new Entry(key, value));
     Message response;
 
     try {

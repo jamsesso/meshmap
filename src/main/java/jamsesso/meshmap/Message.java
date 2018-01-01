@@ -19,12 +19,15 @@ import java.nio.ByteBuffer;
 @EqualsAndHashCode
 @ToString(exclude = "payload")
 public class Message {
-  public static final Message HI = new Message("HI");
-  public static final Message BYE = new Message("BYE");
-  public static final Message ACK = new Message("ACK");
-  public static final Message YES = new Message("YES");
-  public static final Message NO = new Message("NO");
-  public static final Message ERR = new Message("ERR");
+  public static final String TYPE_HI = "HI";
+  public static final String TYPE_BYE = "BYE";
+  public static final String TYPE_ACK = "ACK";
+  public static final String TYPE_ERR = "ERR";
+
+  public static final Message HI = new Message(TYPE_HI);
+  public static final Message BYE = new Message(TYPE_BYE);
+  public static final Message ACK = new Message(TYPE_ACK);
+  public static final Message ERR = new Message(TYPE_ERR);
 
   private static final int MESSAGE_TYPE = 32;
   private static final int MESSAGE_SIZE = 4;
