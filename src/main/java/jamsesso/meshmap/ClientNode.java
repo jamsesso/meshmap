@@ -14,18 +14,14 @@ public class ClientNode {
       map.clear();
 
       map.put("name", "Sam Jesso");
-      map.put("age", "23");
-      map.put("status", "Single");
-      map.put("salary", "82000");
-      map.put("location", "Fredericton NB");
+      map.put("github_profile", "http://github.com/jamsesso");
+      map.put("profession", "Software Developer");
 
       System.out.println(map);
 
       System.out.println(map.get("name"));
-      System.out.println(map.get("age"));
-      System.out.println(map.get("status"));
-      System.out.println(map.get("salary"));
-      System.out.println(map.get("location"));
+      System.out.println(map.get("github_profile"));
+      System.out.println(map.get("profession"));
     }
     finally {
       System.out.println("Node is leaving cluster");
