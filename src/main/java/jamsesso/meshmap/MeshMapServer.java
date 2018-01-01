@@ -1,13 +1,17 @@
 package jamsesso.meshmap;
 
+import lombok.Value;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static java.lang.System.err;
 
@@ -53,19 +57,22 @@ public class MeshMapServer implements Runnable, AutoCloseable {
     }
   }
 
-  public void broadcast(Message message) {
-    cluster.getAllNodes().parallelStream()
+  public Map<Node, Message> broadcast(Message message) {
+    return cluster.getAllNodes().parallelStream()
       .filter(node -> !node.equals(self))
-      .forEach(node -> {
+      .map(node -> {
         try {
-          message(node, message);
+          return new BroadcastResponse(node, message(node, message));
         }
         catch(IOException e) {
           // TODO Better error handling strategy needed.
           err.println("Unable to broadcast message to node: " + node);
           e.printStackTrace();
+
+          return new BroadcastResponse(node, Message.ERR);
         }
-      });
+      })
+      .collect(Collectors.toMap(BroadcastResponse::getNode, BroadcastResponse::getResponse));
   }
 
   @Override
@@ -108,5 +115,11 @@ public class MeshMapServer implements Runnable, AutoCloseable {
   @Override
   public void close() throws Exception {
     serverSocket.close();
+  }
+
+  @Value
+  private static class BroadcastResponse {
+    Node node;
+    Message response;
   }
 }

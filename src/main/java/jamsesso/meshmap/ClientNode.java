@@ -2,6 +2,7 @@ package jamsesso.meshmap;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 public class ClientNode {
   public static void main(String[] args) throws Exception {
@@ -19,9 +20,13 @@ public class ClientNode {
 
       System.out.println(map);
 
-      System.out.println(map.get("name"));
-      System.out.println(map.get("github_profile"));
-      System.out.println(map.get("profession"));
+      System.out.println("Name: " + map.get("name"));
+      System.out.println("Github: " + map.get("github_profile"));
+      System.out.println("Profession: " + map.get("profession"));
+      System.out.println("Total map size: " + map.size());
+      System.out.println("Empty? " + map.isEmpty());
+      System.out.println("Keys: " + Arrays.toString(map.keySet().toArray()));
+      System.out.println("Values: " + Arrays.toString(map.values().toArray()));
     }
     finally {
       System.out.println("Node is leaving cluster");

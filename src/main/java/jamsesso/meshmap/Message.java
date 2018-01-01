@@ -23,11 +23,15 @@ public class Message {
   public static final String TYPE_BYE = "BYE";
   public static final String TYPE_ACK = "ACK";
   public static final String TYPE_ERR = "ERR";
+  public static final String TYPE_YES = "YES";
+  public static final String TYPE_NO = "NO";
 
   public static final Message HI = new Message(TYPE_HI);
   public static final Message BYE = new Message(TYPE_BYE);
   public static final Message ACK = new Message(TYPE_ACK);
   public static final Message ERR = new Message(TYPE_ERR);
+  public static final Message YES = new Message(TYPE_YES);
+  public static final Message NO = new Message(TYPE_NO);
 
   private static final int MESSAGE_TYPE = 32;
   private static final int MESSAGE_SIZE = 4;

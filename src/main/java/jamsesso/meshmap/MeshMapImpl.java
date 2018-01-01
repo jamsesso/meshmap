@@ -4,6 +4,7 @@ import lombok.Value;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -15,6 +16,10 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
   private static final String TYPE_REMOVE = "REMOVE";
   private static final String TYPE_CLEAR = "CLEAR";
   private static final String TYPE_KEY_SET = "KEY_SET";
+  private static final String TYPE_SIZE = "SIZE";
+  private static final String TYPE_CONTAINS_KEY = "CONTAINS_KEY";
+  private static final String TYPE_CONTAINS_VALUE = "CONTAINS_VALUE";
+  private static final String TYPE_DUMP_ENTRIES = "DUMP_ENTRIES";
 
   private final CachedMeshMapCluster cluster;
   private final MeshMapServer server;
@@ -63,6 +68,29 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
         return new Message(TYPE_KEY_SET, keys);
       }
 
+      case TYPE_SIZE: {
+        return new Message(TYPE_SIZE, ByteBuffer.allocate(4).putInt(delegate.size()).array());
+      }
+
+      case TYPE_CONTAINS_KEY: {
+        Object key = message.getPayload(Object.class);
+        return delegate.containsKey(key) ? Message.YES : Message.NO;
+      }
+
+      case TYPE_CONTAINS_VALUE: {
+        Object value = message.getPayload(Object.class);
+        return delegate.containsValue(value) ? Message.YES : Message.NO;
+      }
+
+      case TYPE_DUMP_ENTRIES: {
+        Entry[] entries = delegate.entrySet().stream()
+          .map(entry -> new Entry(entry.getKey(), entry.getValue()))
+          .collect(Collectors.toList())
+          .toArray(new Entry[0]);
+
+        return new Message(TYPE_DUMP_ENTRIES, entries);
+      }
+
       default: {
         return Message.ACK;
       }
@@ -71,23 +99,54 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
 
   @Override
   public int size() {
-    // TODO global size
-    return delegate.size();
+    Message sizeMsg = new Message(TYPE_SIZE);
+
+    return delegate.size() + server.broadcast(sizeMsg).entrySet().stream()
+      .map(Map.Entry::getValue)
+      .filter(response -> TYPE_SIZE.equals(response.getType()))
+      .mapToInt(Message::getPayloadAsInt)
+      .sum();
   }
 
   @Override
   public boolean isEmpty() {
-    return false;
+    return size() == 0;
   }
 
   @Override
   public boolean containsKey(Object key) {
-    return false;
+    Node target = getNodeForKey(key);
+
+    if (target.equals(self)) {
+      // Key lives on the current node.
+      return delegate.containsKey(key);
+    }
+
+    Message containsKeyMsg = new Message(TYPE_CONTAINS_KEY, key);
+    Message response;
+
+    try {
+      response = server.message(target, containsKeyMsg);
+    }
+    catch(IOException e) {
+      throw new MeshMapRuntimeException(e);
+    }
+
+    return Message.YES.equals(response);
   }
 
   @Override
   public boolean containsValue(Object value) {
-    return false;
+    if (delegate.containsValue(value)) {
+      // Check locally first.
+      return true;
+    }
+
+    Message containsValueMsg = new Message(TYPE_CONTAINS_VALUE, value);
+
+    return server.broadcast(containsValueMsg).entrySet().stream()
+      .map(Map.Entry::getValue)
+      .anyMatch(Message.YES::equals);
   }
 
   @Override
@@ -108,7 +167,7 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
 
   @Override
   public void putAll(Map<? extends K, ? extends V> m) {
-
+    m.entrySet().parallelStream().forEach(entry -> put(entry.getKey(), entry.getValue()));
   }
 
   @Override
@@ -120,22 +179,43 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
 
   @Override
   public Set<K> keySet() {
-    return null;
+    return cluster.getAllNodes().parallelStream()
+      .map(this::keySet)
+      .flatMap(Stream::of)
+      .map(object -> (K) object)
+      .collect(Collectors.toSet());
   }
 
   @Override
   public Collection<V> values() {
-    return null;
+    return entrySet().stream()
+      .map(Map.Entry::getValue)
+      .collect(Collectors.toList());
   }
 
   @Override
   public Set<Map.Entry<K, V>> entrySet() {
-    return null;
+    Message dumpEntriesMsg = new Message(TYPE_DUMP_ENTRIES);
+    Set<Map.Entry<K, V>> entries = new HashSet<>();
+
+    for (Map.Entry<Object, Object> localEntry : delegate.entrySet()) {
+      entries.add(new TypedEntry<>((K) localEntry.getKey(), (V) localEntry.getValue()));
+    }
+
+    for (Map.Entry<Node, Message> response : server.broadcast(dumpEntriesMsg).entrySet()) {
+      Entry[] remoteEntries = response.getValue().getPayload(Entry[].class);
+
+      for (Entry remoteEntry : remoteEntries) {
+        entries.add(new TypedEntry<>((K) remoteEntry.getKey(), (V) remoteEntry.getValue()));
+      }
+    }
+
+    return entries;
   }
 
   @Override
   public String toString() {
-    return "[" + String.join(", ", delegate.entrySet().stream()
+    return "MeshMapImpl(Local)[" + String.join(", ", delegate.entrySet().stream()
       .map(entry -> entry.getKey() + ":" + entry.getValue())
       .collect(Collectors.toList()).toArray(new String[0])) + "]";
   }
@@ -287,6 +367,11 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
   }
 
   private Object[] keySet(Node target) {
+    if (target.equals(self)) {
+      // Key is on local server.
+      return delegate.keySet().toArray();
+    }
+
     Message keySetMsg = new Message(TYPE_KEY_SET);
 
     try {
@@ -302,5 +387,16 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
   private static class Entry implements Serializable {
     Object key;
     Object value;
+  }
+
+  @Value
+  private static class TypedEntry<K, V> implements Map.Entry<K, V> {
+    K key;
+    V value;
+
+    @Override
+    public V setValue(V value) {
+      throw new UnsupportedOperationException();
+    }
   }
 }
