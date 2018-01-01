@@ -158,13 +158,45 @@ public class MeshMapImpl<K, V> implements MeshMap<K, V>, MessageHandler {
     int hash = key.hashCode() & Integer.MAX_VALUE;
     List<Node> nodes = cluster.getAllNodes();
 
-    for (Node candidate : nodes) {
-      if (hash <= candidate.getId()) {
-        return candidate;
+    int leftIndex = 0;
+    int rightIndex = nodes.size() - 1;
+
+    while (true) {
+      if (leftIndex == rightIndex) {
+        // Only 1 element left.
+        return nodes.get(leftIndex);
+      }
+
+      int midIndex = (int) Math.ceil((rightIndex + leftIndex) / 2);
+      Node midNode = nodes.get(midIndex);
+
+      // Check if this is the left-most node and the hash is less than or equal to the ID.
+      if (midIndex == 0 && hash <= midNode.getId()) {
+        return midNode;
+      }
+
+      // Check if this is the right-most node and the hash is greater than the ID.
+      if (midIndex == nodes.size() - 1 && hash > midNode.getId()) {
+        return nodes.get(0);
+      }
+
+      // Check if the object resides on the middle node.
+      Node prevNode = nodes.get(midIndex - 1);
+
+      if (hash > prevNode.getId() && hash <= midNode.getId()) {
+        return midNode;
+      }
+
+      // Didn't find the target node; keep searching.
+      if (hash < midNode.getId()) {
+        // The target node is to the left.
+        rightIndex = midIndex - 1;
+      }
+      else {
+        // The target node is to the right.
+        leftIndex = midIndex + 1;
       }
     }
-
-    return nodes.get(0);
   }
 
   @Value
