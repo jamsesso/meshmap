@@ -63,7 +63,7 @@ It is important to mention that it currently takes `O(N)` time to determine whic
 | `get(Object k)` | `1` |
 | `put(K key, V value)` | `1` |
 | `remove(K key)` | `1` |
-| `putAll(Map<? extends K, ? extends V> m)` | `min(N-1, m.size())` |
+| `putAll(Map<? extends K, ? extends V> m)` | `m.size()` |
 | `clear()` | `N-1` |
 | `keySet()` | `N-1` |
 | `values()` | `N-1` |
