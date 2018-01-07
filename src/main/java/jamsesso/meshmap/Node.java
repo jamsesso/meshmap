@@ -2,7 +2,6 @@ package jamsesso.meshmap;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import lombok.Value;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;

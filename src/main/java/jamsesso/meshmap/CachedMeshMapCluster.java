@@ -15,7 +15,6 @@ public class CachedMeshMapCluster implements MeshMapCluster {
   public List<Node> getAllNodes() {
     synchronized (lock) {
       if(nodes == null) {
-        System.out.println("Cache miss!");
         nodes = delegate.getAllNodes();
       }
 
@@ -26,11 +25,6 @@ public class CachedMeshMapCluster implements MeshMapCluster {
   @Override
   public <K, V> MeshMap<K, V> join() throws MeshMapException {
     return delegate.join();
-  }
-
-  @Override
-  public void close() throws Exception {
-    delegate.close();
   }
 
   public void clearCache() {

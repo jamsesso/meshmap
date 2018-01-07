@@ -2,7 +2,6 @@ package jamsesso.meshmap;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.SneakyThrows;
 import lombok.ToString;
 
 import java.io.*;
@@ -41,31 +40,17 @@ public class Message {
   private final byte[] payload;
 
   public Message(String type) {
-    this(type, 0, new byte[0]);
+    this(type, new byte[0]);
   }
 
   public Message(String type, Object payload) {
-    if (type.getBytes().length > MESSAGE_TYPE) {
-      throw new IllegalArgumentException("Message type must not exceed 32 bytes");
-    }
-
-    byte[] serialized = toBytes(payload);
-    this.type = type;
-    this.length = serialized.length;
-    this.payload = serialized;
+    this(type, toBytes(payload));
   }
 
   public Message(String type, byte[] payload) {
-    this(type, payload.length, payload);
-  }
-
-  public Message(String type, int length, byte[] payload) {
-    if (type.getBytes().length > MESSAGE_TYPE) {
-      throw new IllegalArgumentException("Message type must not exceed 32 bytes");
-    }
-
+    checkType(type);
     this.type = type;
-    this.length = length;
+    this.length = payload.length;
     this.payload = payload;
   }
 
@@ -103,7 +88,7 @@ public class Message {
 
     inputStream.read(msgPayload);
 
-    return new Message(new String(msgType).trim(), size, msgPayload);
+    return new Message(new String(msgType).trim(), msgPayload);
   }
 
   private static byte[] toBytes(Object object) {

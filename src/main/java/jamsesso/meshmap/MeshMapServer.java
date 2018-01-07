@@ -9,8 +9,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static java.lang.System.err;
@@ -19,8 +17,8 @@ public class MeshMapServer implements Runnable, AutoCloseable {
   private final MeshMapCluster cluster;
   private final Node self;
   private MessageHandler messageHandler;
-  private AtomicBoolean started = new AtomicBoolean(false);
-  private AtomicReference<IOException> failure = new AtomicReference<>(null);
+  private volatile boolean started = false;
+  private volatile IOException failure = null;
   private ServerSocket serverSocket;
 
   public MeshMapServer(MeshMapCluster cluster, Node self) {
@@ -37,23 +35,30 @@ public class MeshMapServer implements Runnable, AutoCloseable {
     new Thread(this).start();
 
     // Wait for the server to start.
-    while (!started.get());
+    while (!started);
 
-    if (failure.get() != null) {
-      throw failure.get();
+    if (failure != null) {
+      throw failure;
     }
   }
 
   public Message message(Node node, Message message) throws IOException {
-    try (Socket socket = new Socket(node.getAddress().getAddress(), node.getAddress().getPort());
-         OutputStream outputStream = socket.getOutputStream();
-         InputStream inputStream = socket.getInputStream()) {
-      message.write(outputStream);
-      outputStream.flush();
-      return Message.read(inputStream);
+    try {
+      return Retryable.retry(() -> {
+        try (Socket socket = new Socket()) {
+          socket.connect(node.getAddress());
+
+          try (OutputStream outputStream = socket.getOutputStream();
+               InputStream inputStream = socket.getInputStream()) {
+            message.write(outputStream);
+            outputStream.flush();
+            return Message.read(inputStream);
+          }
+        }
+      }).on(IOException.class).times(3);
     }
-    finally {
-      System.out.println("Sent message to node: " + node + " " + message);
+    catch (Exception e) {
+      throw new IOException(e);
     }
   }
 
@@ -81,10 +86,10 @@ public class MeshMapServer implements Runnable, AutoCloseable {
       serverSocket = new ServerSocket(self.getAddress().getPort());
     }
     catch (IOException e) {
-      failure.set(e);
+      failure = e;
     }
     finally {
-      started.set(true);
+      started = true;
     }
 
     while (!serverSocket.isClosed()) {
@@ -92,14 +97,14 @@ public class MeshMapServer implements Runnable, AutoCloseable {
            InputStream inputStream = socket.getInputStream();
            OutputStream outputStream = socket.getOutputStream()) {
         Message message = Message.read(inputStream);
-        System.out.println("Received message: " + message);
         Message response = messageHandler.handle(message);
 
-        if (response == null) {
+        if(response == null) {
           response = Message.ACK;
         }
 
         response.write(outputStream);
+        outputStream.flush();
       }
       catch (SocketException e) {
         // Socket was closed. Nothing to do here. Node is going down.

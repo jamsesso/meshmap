@@ -76,11 +76,3 @@ MeshMap uses Gradle as a build system and includes the Gradle Wrapper.
 ```
 ~$ ./gradlew build
 ```
-
-# TODO
-
- - [ ] Implement the `S3MeshMapCluster` service discovery strategy.
- - [ ] Improve `getNodeForKey` calculation algorithm to be `O(log N)`.
- - [ ] Write tests.
- - [ ] Introduce transient nodes: nodes that do not store any data locally.
- - [ ] Provide an API to deterministically calculate cluster ring position.
