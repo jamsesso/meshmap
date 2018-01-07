@@ -21,6 +21,19 @@ try (MeshMapCluster cluster = new LocalMeshMapCluster(self, new File("sd"));
 
 With an instance of `MeshMap`, applications can share information as easily as using get/put operations on the map.
 
+For more examples, see the [jamsesso.meshmap.examples](https://github.com/jamsesso/meshmap/tree/master/src/main/java/jamsesso/meshmap/examples) package.
+
+## Interactive Demo
+
+To use the interactive demo, start by booting any number of `LocalWorkerNode` instances with the same cluster name.
+Next, run an instance of `InteractiveNode`. Both programs have the same argument format. The following script builds and starts a worker node and the interactive console.
+
+```
+./gradlew build
+java -jar ./build/libs/meshmap-{VERSION}.jar jamsesso.meshmap.examples.LocalWorkerNode 45100 cluster1
+java -jar ./build/libs/meshmap-{VERSION}.jar jamsesso.meshmap.examples.InteractiveNode 45101 cluster1
+```
+
 # Do you need MeshMap?
 
 If you find yourself needed to iterate over all of the entries in a map, your use-case will probably negate the benefit of using MeshMap.
