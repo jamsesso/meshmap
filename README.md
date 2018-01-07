@@ -30,8 +30,8 @@ Next, run an instance of `InteractiveNode`. Both programs have the same argument
 
 ```
 ./gradlew build
-java -jar ./build/libs/meshmap-{VERSION}.jar jamsesso.meshmap.examples.LocalWorkerNode 45100 cluster1
-java -jar ./build/libs/meshmap-{VERSION}.jar jamsesso.meshmap.examples.InteractiveNode 45101 cluster1
+java -cp ./build/libs/meshmap-{VERSION}.jar jamsesso.meshmap.examples.LocalWorkerNode 45100 cluster1
+java -cp ./build/libs/meshmap-{VERSION}.jar jamsesso.meshmap.examples.InteractiveNode 45101 cluster1
 ```
 
 # Do you need MeshMap?
