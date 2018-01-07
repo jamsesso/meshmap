@@ -10,7 +10,7 @@ The goal of MeshMap is to provide a simple API with all of the functionality of 
 ```java
 Node self = new Node("127.0.0.1", 45700);
 
-try (MeshMapCluster cluster = new LocalMeshMapCluster(self, new File("sd"));
+try (LocalMeshMapCluster cluster = new LocalMeshMapCluster(self, new File("sd"));
      MeshMap<String, Person> people = cluster.join()) {
   Person sam = people.get("Sam"); // Look through the cluster for Sam
   int numPeople = people.size();  // Get the number of entries across all nodes
